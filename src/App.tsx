@@ -1,38 +1,60 @@
-import * as React from "react"
-import {
-  ChakraProvider,
-  Box,
-  Text,
-  Link,
-  VStack,
-  Code,
-  Grid,
-} from "@chakra-ui/react"
-import { ColorModeSwitcher } from "./components/ColorModeSwitcher"
-import { Logo } from "./Logo"
-import customTheme from "./theme"
+import { ChakraProvider, useColorModeValue } from '@chakra-ui/react';
+import customTheme from './theme';
+import '@rainbow-me/rainbowkit/styles.css';
+import { darkTheme, getDefaultWallets, lightTheme, RainbowKitProvider } from '@rainbow-me/rainbowkit';
+import { chain, configureChains, createClient, WagmiConfig } from 'wagmi';
+import { publicProvider } from 'wagmi/providers/public';
+import Home from './Routes/Home';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import Root from './Routes/Root';
+import ErrorPage from './components/ErrorPage';
 
-export const App = () => (
-  <ChakraProvider theme={customTheme}>
-    <Box textAlign="center" fontSize="xl">
-      <Grid minH="100vh" p={3}>
-        <ColorModeSwitcher justifySelf="flex-end" />
-        <VStack spacing={8}>
-          <Logo h="40vmin" pointerEvents="none" />
-          <Text>
-            Edit <Code fontSize="xl">src/App.tsx</Code> and save to reload.
-          </Text>
-          <Link
-            color="teal.500"
-            href="https://chakra-ui.com"
-            fontSize="2xl"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn Chakra
-          </Link>
-        </VStack>
-      </Grid>
-    </Box>
-  </ChakraProvider>
-)
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <Root />,
+    children: [
+      {
+        path: '/',
+        element: <Home />,
+      },
+    ],
+    errorElement: <ErrorPage />,
+  },
+]);
+
+const { chains, provider } = configureChains(
+  [chain.mainnet, chain.polygon, chain.polygonMumbai, chain.goerli],
+  [publicProvider()]
+);
+
+const { connectors } = getDefaultWallets({
+  appName: 'My Web3 App',
+  chains,
+});
+
+const wagmiClient = createClient({
+  autoConnect: true,
+  connectors,
+  provider,
+});
+
+export const App = () => {
+  return (
+    <ChakraProvider theme={customTheme}>
+      <WagmiProvider />
+    </ChakraProvider>
+  );
+};
+
+const WagmiProvider = () => {
+  const theme = useColorModeValue(lightTheme(), darkTheme({ ...darkTheme.accentColors.blue }));
+
+  return (
+    <WagmiConfig client={wagmiClient}>
+      <RainbowKitProvider chains={chains} theme={theme}>
+        <RouterProvider router={router} />
+      </RainbowKitProvider>
+    </WagmiConfig>
+  );
+};
